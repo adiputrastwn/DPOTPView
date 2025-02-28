@@ -316,10 +316,19 @@ extension DPOTPView : UITextFieldDelegate , OTPBackTextFieldDelegate {
             dpOTPViewDelegate?.dpOTPViewRemoveText(text ?? "", at: next.tag/1000 - 1)
         }
     }
+    
+    func textFieldDidPasted(_ textField: UITextField, string: String) {
+        guard string.count <= count else {
+            return
+        }
+        text = string
+        dpOTPViewDelegate?.dpOTPViewAddText(text ?? "", at: string.count - 1)
+    }
 }
 
 protocol OTPBackTextFieldDelegate {
     func textFieldDidDelete(_ textField : UITextField)
+    func textFieldDidPasted(_ textField : UITextField, string : String)
 }
 
 
@@ -343,16 +352,23 @@ fileprivate class OTPBackTextField: UITextField {
     }
     
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
-//        if action == #selector(UIResponderStandardEditActions.copy(_:)) ||
-//            action == #selector(UIResponderStandardEditActions.cut(_:)) ||
-//            action == #selector(UIResponderStandardEditActions.select(_:)) ||
-//            action == #selector(UIResponderStandardEditActions.selectAll(_:)) ||
-//            action == #selector(UIResponderStandardEditActions.delete(_:)) {
-//
-//            return false
-//        }
-//        return super.canPerformAction(action, withSender: sender)
-        return false
+        
+        if action == #selector(UIResponderStandardEditActions.copy(_:)) ||
+            action == #selector(UIResponderStandardEditActions.cut(_:)) ||
+            action == #selector(UIResponderStandardEditActions.select(_:)) ||
+            action == #selector(UIResponderStandardEditActions.select(_:)) ||
+            action == #selector(UIResponderStandardEditActions.selectAll(_:)) ||
+            action == #selector(UIResponderStandardEditActions.delete(_:)) {
+
+            return false
+        }
+        return super.canPerformAction(action, withSender: sender)
+//        return false
+    }
+    
+    override func paste(_ sender: Any?) {
+        guard let sender = sender, let pasteboard = UIPasteboard.general.string else { return }
+        OTPBackDelegate?.textFieldDidPasted(self, string: pasteboard)
     }
     
     override func becomeFirstResponder() -> Bool {
@@ -411,11 +427,11 @@ fileprivate class OTPBackTextField: UITextField {
     }
     
     override func textRect(forBounds bounds: CGRect) -> CGRect {
-        return bounds.inset(by: dpOTPView?.textEdgeInsets ?? UIEdgeInsets.zero)
+        return bounds.inset(by: dpOTPView.textEdgeInsets ?? UIEdgeInsets.zero)
     }
     
     override func editingRect(forBounds bounds: CGRect) -> CGRect {
-        return bounds.inset(by: dpOTPView?.editingTextEdgeInsets ?? UIEdgeInsets.zero)
+        return bounds.inset(by: dpOTPView.editingTextEdgeInsets ?? UIEdgeInsets.zero)
     }
     
     fileprivate func removePreviouslyAddedLayer(name : String) {
